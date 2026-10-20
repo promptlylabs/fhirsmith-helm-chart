@@ -1,9 +1,10 @@
 # Artifact Hub repository metadata
 # See: https://artifacthub.io/docs/topics/repositories/
 #
-# After registering this repository on Artifact Hub, add the repositoryID
-# assigned by Artifact Hub to achieve "Verified Publisher" status.
+# repositoryID is the UUID Artifact Hub assigned to this repository; it grants
+# "Verified Publisher" status.
 #
+repositoryID: 31acc0ba-7382-4bb6-9170-84971f9dee74
 owners:
   - name: Dani
     email: andre.gomes@promptlyhealth.com
