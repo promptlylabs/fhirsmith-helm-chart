@@ -1,0 +1,56 @@
+{{- if eq (include "fhirsmith.workloadKind" .) "StatefulSet" }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "fhirsmith.fullname" . }}
+  labels:
+    {{- include "fhirsmith.labels" . | nindent 4 }}
+spec:
+  {{- if not (or .Values.autoscaling.enabled .Values.keda.enabled) }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  serviceName: {{ include "fhirsmith.fullname" . }}-headless
+  podManagementPolicy: {{ .Values.workload.podManagementPolicy }}
+  {{- with .Values.workload.updateStrategy }}
+  updateStrategy:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- if .Values.persistence.enabled }}
+  {{- with .Values.workload.persistentVolumeClaimRetentionPolicy }}
+  {{- /* Retain by default: the terminology cache is expensive to rebuild
+         (a multi-GB download), so scaling down or deleting the StatefulSet
+         should not throw it away. */}}
+  persistentVolumeClaimRetentionPolicy:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "fhirsmith.selectorLabels" . | nindent 6 }}
+  template:
+    {{- include "fhirsmith.podTemplate" . | nindent 4 }}
+  {{- if .Values.persistence.enabled }}
+  volumeClaimTemplates:
+    # Selector labels only: volumeClaimTemplates are immutable after creation,
+    # and fhirsmith.labels carries helm.sh/chart and app.kubernetes.io/version,
+    # which change on every chart/appVersion bump and would make the API server
+    # reject the update.
+    - metadata:
+        name: data
+        labels:
+          {{- include "fhirsmith.selectorLabels" . | nindent 10 }}
+        {{- with .Values.persistence.annotations }}
+        annotations:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+      spec:
+        accessModes:
+          - {{ .Values.persistence.accessMode | default "ReadWriteOnce" }}
+        {{- if .Values.persistence.storageClass }}
+        storageClassName: {{ .Values.persistence.storageClass }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.persistence.size | default "10Gi" }}
+  {{- end }}
+{{- end }}

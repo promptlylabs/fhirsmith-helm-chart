@@ -1,0 +1,21 @@
+{{- if eq (include "fhirsmith.workloadKind" .) "Deployment" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "fhirsmith.fullname" . }}
+  labels:
+    {{- include "fhirsmith.labels" . | nindent 4 }}
+spec:
+  {{- if not (or .Values.autoscaling.enabled .Values.keda.enabled) }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  {{- with .Values.strategy }}
+  strategy:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "fhirsmith.selectorLabels" . | nindent 6 }}
+  template:
+    {{- include "fhirsmith.podTemplate" . | nindent 4 }}
+{{- end }}

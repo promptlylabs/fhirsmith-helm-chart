@@ -1,0 +1,48 @@
+{{- if .Values.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "fhirsmith.fullname" . }}
+  labels:
+    {{- include "fhirsmith.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: {{ include "fhirsmith.workloadKind" . }}
+    name: {{ include "fhirsmith.fullname" . }}
+  minReplicas: {{ .Values.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.autoscaling.maxReplicas }}
+  {{- with .Values.autoscaling.behavior }}
+  behavior:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  metrics:
+    {{- $cpu := .Values.autoscaling.targetCPUUtilizationPercentage }}
+    {{- $mem := .Values.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- if not (kindIs "invalid" $mem) }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ $mem }}
+    {{- end }}
+    {{- /* Emit CPU when a CPU target is set (explicit values, incl. 0, pass
+           through verbatim); otherwise fall back to 80 only when no target at
+           all is set, so the metrics list is never empty. */}}
+    {{- if not (kindIs "invalid" $cpu) }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ $cpu }}
+    {{- else if kindIs "invalid" $mem }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 80
+    {{- end }}
+{{- end }}

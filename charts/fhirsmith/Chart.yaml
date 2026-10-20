@@ -1,0 +1,45 @@
+apiVersion: v2
+name: fhirsmith
+description: A Helm chart for deploying FHIRsmith as a FHIR terminology (tx) server
+type: application
+version: 0.4.0
+appVersion: "0.10.1"
+kubeVersion: ">=1.19.0-0"
+
+home: https://github.com/HealthIntersections/FHIRsmith
+icon: https://raw.githubusercontent.com/HealthIntersections/FHIRsmith/main/FHIRsmith.png
+sources:
+  - https://github.com/HealthIntersections/FHIRsmith
+  - https://github.com/promptlylabs/fhirsmith-helm-chart
+
+keywords:
+  - fhir
+  - hl7
+  - healthcare
+  - terminology
+  - interoperability
+  - fhirsmith
+
+maintainers:
+  - name: promptlylabs
+    url: https://github.com/promptlylabs
+
+annotations:
+  artifacthub.io/category: integration-delivery
+  artifacthub.io/license: Apache-2.0
+  artifacthub.io/links: |
+    - name: FHIRsmith Source
+      url: https://github.com/HealthIntersections/FHIRsmith
+    - name: support
+      url: https://github.com/promptlylabs/fhirsmith-helm-chart/issues
+  artifacthub.io/images: |
+    - name: fhirsmith
+      image: ghcr.io/healthintersections/fhirsmith:0.10.1
+  artifacthub.io/signKey: |
+    fingerprint: 91BB0B66D1ACFC4F1334EFF88DBCB7A6A6A4969F
+    url: https://promptlylabs.github.io/fhirsmith-helm-chart/pubkey.asc
+  artifacthub.io/changes: |
+    - kind: added
+      description: First public release
+    - kind: changed
+      description: persistence.storageClass defaults to the cluster's default StorageClass
