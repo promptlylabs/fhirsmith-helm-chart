@@ -1,0 +1,67 @@
+{{- if .Values.keda.enabled }}
+{{- if .Values.autoscaling.enabled }}
+{{- fail "autoscaling.enabled and keda.enabled are both true: the native HPA and the one KEDA creates would both scale the same workload. Enable only one." }}
+{{- end }}
+{{- $cron := .Values.keda.cron }}
+{{- if and (or $cron.start $cron.end) (not (and $cron.start $cron.end)) }}
+{{- fail "keda.cron needs both start and end." }}
+{{- end }}
+{{- if not (or $cron.start .Values.keda.triggers) }}
+{{- fail "keda.enabled is true but neither keda.cron.start/end nor keda.triggers is set; KEDA rejects a ScaledObject without triggers." }}
+{{- end }}
+{{- $desired := max (int .Values.replicaCount) (int .Values.keda.minReplicaCount) }}
+{{- if not (kindIs "invalid" $cron.desiredReplicas) }}
+{{- $desired = $cron.desiredReplicas }}
+{{- end }}
+{{- $max := $desired }}
+{{- if not (kindIs "invalid" .Values.keda.maxReplicaCount) }}
+{{- $max = .Values.keda.maxReplicaCount }}
+{{- end }}
+{{- $fallbackReplicas := $desired }}
+{{- if not (kindIs "invalid" .Values.keda.fallback.replicas) }}
+{{- $fallbackReplicas = .Values.keda.fallback.replicas }}
+{{- end }}
+{{- if gt (int .Values.keda.minReplicaCount) (int $max) }}
+{{- fail (printf "keda.minReplicaCount (%d) is greater than the resolved maxReplicaCount (%d)." (int .Values.keda.minReplicaCount) (int $max)) }}
+{{- end }}
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ .Values.keda.name | default (printf "%s-cron" (include "fhirsmith.fullname" .)) }}
+  labels:
+    {{- include "fhirsmith.labels" . | nindent 4 }}
+  {{- with .Values.keda.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: {{ include "fhirsmith.workloadKind" . }}
+    name: {{ include "fhirsmith.fullname" . }}
+  pollingInterval: {{ int .Values.keda.pollingInterval }}
+  cooldownPeriod: {{ int .Values.keda.cooldownPeriod }}
+  minReplicaCount: {{ int .Values.keda.minReplicaCount }}
+  maxReplicaCount: {{ int $max }}
+  {{- if .Values.keda.fallback.enabled }}
+  fallback:
+    failureThreshold: {{ int .Values.keda.fallback.failureThreshold }}
+    replicas: {{ int $fallbackReplicas }}
+  {{- end }}
+  {{- with .Values.keda.advanced }}
+  advanced:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  triggers:
+    {{- if $cron.start }}
+    - type: cron
+      metadata:
+        timezone: {{ $cron.timezone | quote }}
+        start: {{ $cron.start | quote }}
+        end: {{ $cron.end | quote }}
+        desiredReplicas: {{ int $desired | quote }}
+    {{- end }}
+    {{- with .Values.keda.triggers }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+{{- end }}

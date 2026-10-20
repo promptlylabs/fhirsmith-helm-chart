@@ -1,0 +1,33 @@
+{{- with .Values.networkPolicy }}
+{{- if or .ingress .egress }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "fhirsmith.fullname" $ }}
+  labels:
+    {{- include "fhirsmith.labels" $ | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "fhirsmith.selectorLabels" $ | nindent 6 }}
+  {{- /* Only declare a policyType when matching rules exist, so emptying
+         (or omitting) one side can't turn into an unintended default-deny.
+         If both are empty, the whole resource is skipped so policyTypes is
+         never rendered as an (invalid) null. */}}
+  policyTypes:
+    {{- if .ingress }}
+    - Ingress
+    {{- end }}
+    {{- if .egress }}
+    - Egress
+    {{- end }}
+  {{- with .ingress }}
+  ingress:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .egress }}
+  egress:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}
+{{- end }}

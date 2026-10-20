@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "fhirsmith.fullname" . }}-config
+  labels:
+    {{- include "fhirsmith.labels" . | nindent 4 }}
+{{- /* Keep librarySource in lockstep with where library.yml is actually
+       mounted (dataDir), so overriding dataDir can't desync the two. */}}
+{{- $config := deepCopy .Values.config }}
+{{- if and $config.modules $config.modules.tx }}
+{{- $_ := set $config.modules.tx "librarySource" (printf "%s/library.yml" .Values.dataDir) }}
+{{- end }}
+data:
+  config.json: |
+{{ $config | toPrettyJson | indent 4 }}
+  library.yml: |
+{{ .Values.library | toYaml | indent 4 }}
